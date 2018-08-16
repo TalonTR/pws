@@ -140,9 +140,25 @@
       var code = 4663,
           reason = 'No heartbeat received in due time'
 
-      var event = typeof window != 'undefined' && window.CloseEvent
-        ? new window.CloseEvent('HeartbeatTimeout', { wasClean: true, code: code, reason: reason })
-        : new Error('HeartbeatTimeout')
+	  var event;
+      if (typeof window != 'undefined' && window.CloseEvent && (typeof window.CloseEvent === "function")) {
+        event = new window.CloseEvent('HeartbeatTimeout', { wasClean: true, code: code, reason: reason });
+      } else if (typeof window != 'undefined' && typeof (window.CustomEvent !== "function")) {
+        // ie9-11 polyfill - new Error will fail
+        // https://stackoverflow.com/questions/26596123/internet-explorer-9-10-11-event-constructor-doesnt-work
+      	function CustomEvent ( event, params ) {
+		  params = params || { bubbles: false, cancelable: false, detail: undefined };
+		  var evt = document.createEvent( 'CustomEvent' );
+		  evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );
+		  return evt;
+		}
+
+		CustomEvent.prototype = window.Event.prototype;
+
+		event = new CustomEvent('HeartbeatTimeout')
+      } else {
+      	event = new Error('HeartbeatTimeout');
+      }
 
       event.code = code
       event.reason = reason
